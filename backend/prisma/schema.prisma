@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Feedback {
+  id           Int            @id @default(autoincrement())
+  customerName String
+  rating       Int
+  comment      String?
+  channel      String
+  status       String         @default("NOVO")
+  createdAt    DateTime       @default(now())
+  notes        FeedbackNote[]
+}
+
+model FeedbackNote {
+  id          Int      @id @default(autoincrement())
+  feedbackId  Int
+  description String
+  createdAt   DateTime @default(now())
+  feedback    Feedback @relation(fields: [feedbackId], references: [id])
+}

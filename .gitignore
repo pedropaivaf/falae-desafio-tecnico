@@ -1,0 +1,9 @@
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Segurança extra (cada pacote (backend/, frontend/) também tem o seu)
+**/node_modules/
+**/dist/
+**/.env

@@ -1,0 +1,12 @@
+node_modules
+dist
+
+# Keep environment variables out of version control
+.env
+
+# SQLite database file (gerado por migrate/seed, não versionado)
+dev.db
+*.db-journal
+
+# Prisma Client gerado (regenerado via `npx prisma generate`)
+/generated/prisma
