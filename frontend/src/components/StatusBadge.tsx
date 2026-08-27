@@ -1,6 +1,6 @@
 import type { FeedbackStatus } from "../types/feedback";
 
-const STATUS_LABELS: Record<FeedbackStatus, string> = {
+export const STATUS_LABELS: Record<FeedbackStatus, string> = {
   NOVO: "Novo",
   EM_ANALISE: "Em análise",
   CONCLUIDO: "Concluído",

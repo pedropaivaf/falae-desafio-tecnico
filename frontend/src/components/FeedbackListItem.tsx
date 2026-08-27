@@ -4,25 +4,36 @@ import { ChannelBadge } from "./ChannelBadge";
 import { StatusBadge } from "./StatusBadge";
 import { formatDate } from "../utils/formatDate";
 
-export function FeedbackListItem({ feedback }: { feedback: Feedback }) {
+type FeedbackListItemProps = {
+  feedback: Feedback;
+  onClick: () => void;
+};
+
+export function FeedbackListItem({ feedback, onClick }: FeedbackListItemProps) {
   return (
-    <li className="flex flex-col gap-2 border-b border-slate-200 p-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-slate-900">{feedback.customerName}</span>
-          <StarRating rating={feedback.rating} />
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full flex-col gap-2 border-b border-slate-200 p-4 text-left last:border-b-0 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-slate-900">{feedback.customerName}</span>
+            <StarRating rating={feedback.rating} />
+          </div>
+          <p className="mt-1 truncate text-sm text-slate-500">
+            {feedback.comment ?? "Sem comentário."}
+          </p>
         </div>
-        <p className="mt-1 truncate text-sm text-slate-500">
-          {feedback.comment ?? "Sem comentário."}
-        </p>
-      </div>
-      <div className="flex flex-shrink-0 items-center gap-2">
-        <ChannelBadge channel={feedback.channel} />
-        <StatusBadge status={feedback.status} />
-        <span className="text-xs whitespace-nowrap text-slate-400">
-          {formatDate(feedback.createdAt)}
-        </span>
-      </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <ChannelBadge channel={feedback.channel} />
+          <StatusBadge status={feedback.status} />
+          <span className="text-xs whitespace-nowrap text-slate-400">
+            {formatDate(feedback.createdAt)}
+          </span>
+        </div>
+      </button>
     </li>
   );
 }

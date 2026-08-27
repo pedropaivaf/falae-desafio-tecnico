@@ -1,17 +1,40 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useFeedbacks } from "../hooks/useFeedbacks";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { IndicatorsBar } from "./IndicatorsBar";
 import { FeedbackListItem } from "./FeedbackListItem";
+import { FiltersBar, EMPTY_FILTERS_VALUE, type FiltersBarValue } from "./FiltersBar";
+import { FeedbackDetailModal } from "./FeedbackDetailModal";
 import type { FeedbackFilters } from "../types/feedback";
 
+const SEARCH_DEBOUNCE_MS = 350;
+
 export function FeedbackDashboard() {
-  // Os filtros de verdade (busca/canal/status/nota) entram na próxima fase;
-  // por enquanto a lista completa já vem com indicadores e os 3 estados.
-  const [filters] = useState<FeedbackFilters>({});
+  const [filtersInput, setFiltersInput] = useState<FiltersBarValue>(EMPTY_FILTERS_VALUE);
+  const [selectedFeedbackId, setSelectedFeedbackId] = useState<number | null>(null);
+  const debouncedSearch = useDebouncedValue(filtersInput.search, SEARCH_DEBOUNCE_MS);
+
+  // Filtros de texto/canal/status/nota já ligados na API real (Fase 8).
+  const filters = useMemo<FeedbackFilters>(
+    () => ({
+      search: debouncedSearch.trim() || undefined,
+      channel: filtersInput.channel || undefined,
+      status: filtersInput.status || undefined,
+      rating: filtersInput.rating === "" ? undefined : filtersInput.rating,
+    }),
+    [debouncedSearch, filtersInput.channel, filtersInput.status, filtersInput.rating]
+  );
+
+  const hasActiveFilters = Boolean(
+    filters.search || filters.channel || filters.status || filters.rating
+  );
+
   const state = useFeedbacks(filters);
 
   return (
     <div className="mx-auto max-w-4xl">
+      <FiltersBar value={filtersInput} onChange={setFiltersInput} />
+
       {state.status === "success" && <IndicatorsBar indicators={state.indicators} />}
 
       <div className="mt-6 rounded-lg border border-slate-200 bg-white">
@@ -34,17 +57,32 @@ export function FeedbackDashboard() {
         )}
 
         {state.status === "success" && state.data.length === 0 && (
-          <p className="p-8 text-center text-slate-500">Nenhum feedback encontrado.</p>
+          <p className="p-8 text-center text-slate-500">
+            {hasActiveFilters
+              ? "Nenhum feedback encontrado com os filtros aplicados."
+              : "Nenhum feedback encontrado."}
+          </p>
         )}
 
         {state.status === "success" && state.data.length > 0 && (
           <ul>
             {state.data.map((feedback) => (
-              <FeedbackListItem key={feedback.id} feedback={feedback} />
+              <FeedbackListItem
+                key={feedback.id}
+                feedback={feedback}
+                onClick={() => setSelectedFeedbackId(feedback.id)}
+              />
             ))}
           </ul>
         )}
       </div>
+
+      {selectedFeedbackId !== null && (
+        <FeedbackDetailModal
+          feedbackId={selectedFeedbackId}
+          onClose={() => setSelectedFeedbackId(null)}
+        />
+      )}
     </div>
   );
 }

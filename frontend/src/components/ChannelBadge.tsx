@@ -1,6 +1,6 @@
 import type { FeedbackChannel } from "../types/feedback";
 
-const CHANNEL_LABELS: Record<FeedbackChannel, string> = {
+export const CHANNEL_LABELS: Record<FeedbackChannel, string> = {
   GOOGLE: "Google",
   IFOOD: "iFood",
   PESQUISA: "Pesquisa",
