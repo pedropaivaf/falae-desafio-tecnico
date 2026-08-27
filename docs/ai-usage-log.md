@@ -38,6 +38,54 @@ Formato por entrada: data | fase | o que pedi | o que a IA sugeriu | o que valid
 - Decisão que confirmei antes de confiar: Express 5 propaga erro de `async` handler pro middleware de erro sozinho (sem precisar de `try/catch` manual nem do pacote `express-async-errors` que era necessário no Express 4). Não presumi isso — subi o servidor de verdade e testei.
 - Como validei (end-to-end, servidor rodando, via `curl`, não só leitura): listagem sem filtro, filtros combinados (channel+status+rating), filtro inválido → 400, detalhe por id, notas de um feedback, criar nota vazia → 400, criar nota válida → 201, status inválido → 400, status válido → 200, id inexistente → 404, id não-numérico → 400, JSON malformado no body → 400, e a regra do crítico completa via HTTP: concluir sem anotação → 422 com a mensagem exata do desafio, adicionar anotação e concluir → 200. Todos os casos bateram.
 
+### 2026-08-26 | Fase 5 — testes automatizados (⭐ bom exemplo de sugestão incorreta pro AI_USAGE.md)
+- Pedi: testes com Vitest cobrindo a regra do feedback crítico e as validações principais, contra um banco de testes isolado (não o `dev.db` de demonstração).
+- IA gerou: `feedback.service.ts` original usava o filtro `contains` do Prisma direto no SQL pra busca por nome/comentário.
+- **Sugestão incorreta que um teste automatizado pegou (não fui eu que li e percebi — foi o teste que falhou):** escrevi um teste buscando "PÉSSIMO" (maiúsculo, acentuado) esperando achar um registro com comentário "Péssimo." (minúsculo). O teste falhou: 0 resultados em vez de 1.
+- Causa raiz: o SQLite só ignora maiúscula/minúscula em caracteres ASCII por padrão (`contains` vira `LIKE`). Em caracteres acentuados (é, ç, ã...) ele é case-*sensitive* — e o app inteiro é em português, então isso quebraria busca de nomes/comentários reais o tempo todo (ex.: buscar "atendimento" sem acento não achar "Não gostei do Atendimento").
+- Corrigido para: tirei a busca por texto do `where` do Prisma. Agora busco só pelos filtros "exatos" (canal/status/nota) no banco, e filtro nome/comentário em JavaScript, normalizando os dois lados com `.normalize("NFD")` + removendo os acentos (`\p{Diacritic}`) + `.toLowerCase()`. Pra esse volume de dados (uma tela de restaurante, não milhões de linhas) isso é mais simples e mais correto do que configurar extensão ICU no SQLite.
+- Como validei: reescrevi o teste que falhou, rodei a suíte inteira de novo (31 testes passando), e revalidei via `curl` no servidor real com "REGIÃO" (maiúsculo/acentuado) achando "região" (minúsculo) e "preco" (sem acento) achando "Preço".
+
+### 2026-08-26 | Fase 5 — como os testes rodam isolados
+- Decisão: os testes usam um banco SQLite separado (`tests/test.db`), recriado do zero a partir do `migration.sql` já commitado, via um `setupFiles` do Vitest que troca a `DATABASE_URL` antes de qualquer módulo da aplicação ser importado.
+- Alternativa que descartei: mockar o Prisma Client (ex.: `vitest-mock-extended`). Decidi não usar — pra esse tamanho de projeto, rodar contra um SQLite real é mais simples (menos dependência, menos configuração) e já pegou o bug de acentuação acima, que um mock nunca acharia.
+
+### 2026-08-26 | Fase 5 — bug que só apareceu no Windows do Pedro (não no ambiente da IA)
+- O que aconteceu: os 31 testes passavam no ambiente onde foram gerados, mas ao rodar `npm test` no Windows real, `feedback.service.test.ts` falhou inteiro com `SqliteError: table "Feedback" already exists`, enquanto `feedback.validation.test.ts` passou.
+- Causa: o Vitest roda arquivos de teste em paralelo por padrão. Os dois arquivos usam o mesmo `setupFiles` (`tests/setup.ts`), que apaga e recria o `tests/test.db` do zero. Rodando ao mesmo tempo, um arquivo recria o banco enquanto o outro ainda está usando — condição de corrida. Isso não deu erro no ambiente onde a IA gerou o código (Linux), mas apareceu no Windows do Pedro, provavelmente porque o Windows trava arquivos abertos com mais rigor.
+- Como percebi: reportando o erro exato do terminal do Pedro pra IA investigar, em vez de tentar adivinhar sozinho.
+- Corrigido para: `fileParallelism: false` no `vitest.config.mts` — os arquivos de teste rodam em série, sem concorrência no mesmo banco.
+- Como validei: pedi confirmação rodando `npm test` de novo no Windows depois do fix.
+
+### 2026-08-26 | Fase 6 — setup do frontend
+- Pedi: criar o projeto Vite + React + TypeScript + Tailwind, tipos compartilhados e cliente de API.
+- Antes de gerar qualquer código, conferi as versões atuais no npm (mesma lição da Fase 2 com o Prisma): Vite 8, React 19 e principalmente **Tailwind CSS 4**, que mudou o setup por completo — não usa mais `tailwind.config.js`/`postcss.config.js`/diretivas `@tailwind base/components/utilities`. Agora é só o plugin `@tailwindcss/vite` + `@import "tailwindcss";` no CSS.
+- O scaffold oficial do Vite (`npm create vite@latest`) também mudou bastante: veio com uma landing page de exemplo cheia de imagens/ícones em vez do clássico contador — removi tudo isso (`App.css`, `src/assets`, `public/icons.svg`) antes de escrever o app de verdade.
+- Decisão: proxy `/api` -> `http://localhost:3333` no `vite.config.ts`, em vez de habilitar CORS no backend. Mais simples, e evita o navegador enxergar dois domínios diferentes.
+- Como validei: `npm run build` (tsc + vite build) sem erros, depois subi backend e frontend juntos de verdade e conferi via `curl` no `http://localhost:5173/api/feedbacks` que o proxy repassa pro backend e devolve os 12 feedbacks reais.
+
+### 2026-08-26 | Fase 6 — paleta de marca
+- Pedi: extrair a paleta de cores da logo real da Falaê! (enviei a imagem) e aplicar no frontend, em vez de escolher cores "no olho".
+- IA sugeriu: usar Python/PIL pra amostrar os pixels reais da logo (não estimar visualmente), identificando o teal principal (`#0288a1`), o laranja (`#fe8f00`) e o cinza (`#a9a9a9`) usados na marca, e derivar tons de hover/tint programaticamente a partir desses valores.
+- Decisão: como o projeto usa Tailwind CSS 4 (CSS-first, sem `tailwind.config.js`), as cores foram registradas via bloco `@theme` no `src/index.css` (`--color-brand-teal`, `--color-brand-orange`, etc.), gerando classes utilitárias como `bg-brand-teal` automaticamente.
+- Como validei: rodei `npm run build` e conferi no CSS compilado (`grep` no `dist/assets/*.css`) que `bg-brand-teal` gera exatamente `#0288a1` (a cor real extraída da logo, não um valor aproximado).
+- Observação: só a paleta foi extraída e aplicada — o arquivo da logo em si não foi incorporado ao projeto (não foi pedido).
+
+### 2026-08-26 | Fase 7 — listagem, indicadores e estados (loading/vazio/erro)
+- Pedi: consumir a API de listagem no frontend, mostrando a barra de indicadores e a lista de feedbacks, com os três estados (carregando, vazio, erro) já usando a paleta da marca.
+- IA gerou: hook `useFeedbacks` (state machine loading/error/success, com `filtersKey` serializado como dependência do efeito pra não refazer a busca por causa de uma nova referência de objeto, `reload()` via contador, e guarda de cancelamento no unmount pra evitar `setState` depois de desmontar); componentes `StarRating`, `ChannelBadge`, `StatusBadge` (cores por status usando os tokens da paleta), `IndicatorsBar` (total, nota média com vírgula decimal, positivos em verde, críticos em laranja da marca) e `FeedbackListItem`.
+- Como validei: `npx tsc --noEmit` e `npm run build` sem erros; depois subi backend e frontend reais juntos e tirei um screenshot real da tela (Playwright/Chromium) contra os 12 feedbacks seedados, conferindo visualmente: header teal, indicadores corretos (12 total, 3,1 de média, 5 positivos, 5 críticos — bate com o cálculo manual), estrelas e "Críticos" em laranja, status "Concluído" em verde, badges de canal, datas formatadas em pt-BR.
+- Pendente pras próximas fases: filtros/busca ainda não têm UI (Fase 8), detalhe+anotações (Fase 9), alteração de status (Fase 10).
+
+### 2026-08-27 | Fase 7 — dificuldade real minha: erro 500 e depois "conexão recusada" ao rodar o projeto localmente (⭐ dificuldade pessoal pro AI_USAGE.md)
+- O que aconteceu: fechei todos os terminais pra reiniciar o ambiente do zero e, ao abrir o projeto de novo, a tela mostrou "Erro interno no servidor" (500) na chamada `GET /api/feedbacks`. Depois de mexer, apareceu um segundo erro diferente: `ERR_CONNECTION_REFUSED`.
+- Minha dificuldade: não sabia de cara se o problema era no código, no banco, ou só no jeito que eu estava rodando os dois servidores (backend na porta 3333, frontend na 5173, com proxy `/api` de um pro outro configurado no `vite.config.ts`).
+- Como investiguei (com a IA me orientando a isolar o problema, mas os comandos e a leitura dos erros foram minhas): em vez de mexer no código direto, testei o backend sozinho primeiro (`http://localhost:3333/api/feedbacks` direto no navegador, sem passar pelo frontend) pra descobrir se o problema estava ali ou no proxy do Vite. Assim percebi duas causas diferentes, uma depois da outra:
+  1. O 500 era o backend mesmo: o client do Prisma tinha ficado desatualizado e o banco (`dev.db`) não estava migrado/seedado nesse ambiente, provavelmente por causa do `npm ci` que eu tinha rodado antes pra desfazer o estrago do `npm audit fix --force`. Resolvi rodando de novo `npx prisma generate`, `npx prisma migrate deploy` e `npm run prisma:seed`.
+  2. Depois disso o backend sozinho já respondia certo, mas pelo frontend deu `ERR_CONNECTION_REFUSED` — entendi que esse erro é diferente do 500: significa que não tinha nada rodando na porta 3333 naquele momento (eu tinha fechado o terminal do backend depois de testar). Corrigi mantendo os dois terminais abertos ao mesmo tempo, um com `npm run dev` do backend e outro do frontend.
+- Como validei: com os dois servidores rodando juntos, `localhost:5173` carregou a lista completa com os 12 feedbacks e os indicadores corretos, sem nenhum erro no console.
+- O que aprendi: `500` = servidor rodando mas com erro interno (nesse caso, banco/Prisma fora de sincronia); `ERR_CONNECTION_REFUSED` = servidor nem está de pé. São causas bem diferentes, e o primeiro passo pra debugar isso é sempre isolar — testar o backend direto antes de desconfiar do frontend/proxy.
+
 <!-- Continue adicionando uma entrada por decisão/dúvida relevante nas próximas fases.
      Preste atenção especial a qualquer sugestão que precisar corrigir - isso vira
      a seção "Sugestão incorreta ou incompleta" do AI_USAGE.md. -->
