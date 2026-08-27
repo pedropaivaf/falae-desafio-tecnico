@@ -113,12 +113,12 @@ Mais detalhes de cada decisão, incluindo dificuldades reais encontradas no proc
 - [x] Cadastro de anotação interna, com atualização na tela sem reload
 - [x] Regra de negócio: feedback crítico (nota 1 ou 2) só pode ser concluído com pelo menos uma anotação — validada na API (nunca só no frontend)
 - [x] API completa: listagem+filtros, detalhe, anotações (listar/criar), alteração de status
+- [x] Alteração de status pela interface, com a regra do feedback crítico refletida na tela (erro 422 exibido, sucesso confirmado, sem reload da página)
 - [x] Testes automatizados (31 testes: regras de negócio e validações)
 
 ## Pendências
 
-- [ ] Alteração de status pela interface (a API já suporta e já é testada; falta o botão/seletor na tela)
-- [ ] `AI_USAGE.md` final (o log de decisões já está sendo mantido em [`docs/ai-usage-log.md`](./docs/ai-usage-log.md) ao longo do desenvolvimento)
+Nenhuma pendência conhecida. Todas as funcionalidades obrigatórias do desafio estão implementadas, testadas e documentadas.
 
 ## Uso de IA no desenvolvimento
 

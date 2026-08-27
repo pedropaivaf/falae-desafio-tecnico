@@ -81,6 +81,7 @@ export function FeedbackDashboard() {
         <FeedbackDetailModal
           feedbackId={selectedFeedbackId}
           onClose={() => setSelectedFeedbackId(null)}
+          onStatusChanged={state.reload}
         />
       )}
     </div>

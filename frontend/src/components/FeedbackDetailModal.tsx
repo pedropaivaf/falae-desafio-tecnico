@@ -1,22 +1,48 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { ApiError, createFeedbackNote } from "../api/feedbacks";
+import { ApiError, createFeedbackNote, updateFeedbackStatus } from "../api/feedbacks";
 import { useFeedbackDetail } from "../hooks/useFeedbackDetail";
 import { formatDate } from "../utils/formatDate";
+import { FEEDBACK_STATUSES } from "../types/feedback";
+import type { FeedbackStatus } from "../types/feedback";
 import { StarRating } from "./StarRating";
 import { ChannelBadge } from "./ChannelBadge";
-import { StatusBadge } from "./StatusBadge";
+import { StatusBadge, STATUS_LABELS } from "./StatusBadge";
 
 type FeedbackDetailModalProps = {
   feedbackId: number;
   onClose: () => void;
+  // Chamado depois de uma troca de status bem-sucedida, pra lista de fora
+  // (que mostra o badge de status) se atualizar também, sem reload da página.
+  onStatusChanged?: () => void;
 };
 
-export function FeedbackDetailModal({ feedbackId, onClose }: FeedbackDetailModalProps) {
+export function FeedbackDetailModal({
+  feedbackId,
+  onClose,
+  onStatusChanged,
+}: FeedbackDetailModalProps) {
   const { state, reload } = useFeedbackDetail(feedbackId);
   const [noteText, setNoteText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const [statusSelection, setStatusSelection] = useState<FeedbackStatus | null>(null);
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusSuccess, setStatusSuccess] = useState(false);
+
+  // Mantém o select sincronizado com o status atual (primeira carga e depois
+  // de salvar). Depende só do valor do status (não do objeto `state` inteiro)
+  // pra não disparar de novo — e apagar a mensagem de sucesso — a cada
+  // reload em segundo plano que não muda o status de verdade.
+  const currentStatus = state.status === "success" ? state.data.status : null;
+  useEffect(() => {
+    if (currentStatus !== null) {
+      setStatusSelection(currentStatus);
+    }
+  }, [currentStatus]);
 
   // Fecha com Esc, igual qualquer modal padrão.
   useEffect(() => {
@@ -33,16 +59,39 @@ export function FeedbackDetailModal({ feedbackId, onClose }: FeedbackDetailModal
 
     setSubmitting(true);
     setSubmitError(null);
+    setSubmitSuccess(false);
 
     try {
       await createFeedbackNote(feedbackId, noteText.trim());
       setNoteText("");
       reload(); // atualiza a lista de anotações sem recarregar a página
+      setSubmitSuccess(true);
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "Erro inesperado.";
       setSubmitError(message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleChangeStatus() {
+    if (state.status !== "success" || statusSelection === null) return;
+    if (statusSelection === state.data.status || statusSubmitting) return;
+
+    setStatusSubmitting(true);
+    setStatusError(null);
+    setStatusSuccess(false);
+
+    try {
+      await updateFeedbackStatus(feedbackId, statusSelection);
+      reload(); // atualiza o modal (badge + select) sem reload da página
+      onStatusChanged?.(); // atualiza a lista de fora também
+      setStatusSuccess(true);
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Erro inesperado.";
+      setStatusError(message);
+    } finally {
+      setStatusSubmitting(false);
     }
   }
 
@@ -108,6 +157,43 @@ export function FeedbackDetailModal({ feedbackId, onClose }: FeedbackDetailModal
                 {state.data.comment ?? "Sem comentário."}
               </p>
 
+              <h3 className="mt-6 text-sm font-semibold text-slate-900">Status</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <label htmlFor="feedback-status-select" className="sr-only">
+                  Alterar status
+                </label>
+                <select
+                  id="feedback-status-select"
+                  value={statusSelection ?? state.data.status}
+                  onChange={(event) => {
+                    setStatusSelection(event.target.value as FeedbackStatus);
+                    setStatusSuccess(false);
+                    setStatusError(null);
+                  }}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-teal focus:outline-none"
+                >
+                  {FEEDBACK_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleChangeStatus}
+                  disabled={
+                    statusSelection === state.data.status || statusSelection === null || statusSubmitting
+                  }
+                  className="rounded-md bg-brand-teal px-4 py-2 text-sm font-medium text-white hover:bg-brand-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {statusSubmitting ? "Salvando…" : "Salvar status"}
+                </button>
+              </div>
+              {statusError && <p className="mt-1 text-sm text-red-600">{statusError}</p>}
+              {statusSuccess && (
+                <p className="mt-1 text-sm text-green-600">Status atualizado com sucesso.</p>
+              )}
+
               <h3 className="mt-6 text-sm font-semibold text-slate-900">Anotações internas</h3>
 
               {state.data.notes.length === 0 ? (
@@ -130,12 +216,19 @@ export function FeedbackDetailModal({ feedbackId, onClose }: FeedbackDetailModal
                 <textarea
                   id="note-description"
                   value={noteText}
-                  onChange={(event) => setNoteText(event.target.value)}
+                  onChange={(event) => {
+                    setNoteText(event.target.value);
+                    setSubmitSuccess(false);
+                    setSubmitError(null);
+                  }}
                   placeholder="Adicionar anotação..."
                   rows={2}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-teal focus:outline-none"
                 />
                 {submitError && <p className="mt-1 text-sm text-red-600">{submitError}</p>}
+                {submitSuccess && (
+                  <p className="mt-1 text-sm text-green-600">Anotação cadastrada com sucesso.</p>
+                )}
                 <div className="mt-2 flex justify-end">
                   <button
                     type="submit"

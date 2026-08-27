@@ -9,9 +9,9 @@
 - [x] API de detalhes de um feedback funciona, modal de detalhe na UI -> Fase 4/5/9
 - [x] API de cadastro de anotação funciona (valida vazio/espaço, 201 ao criar), formulário na UI -> Fase 4/5/9
 - [x] Nova anotação aparece na UI sem reload manual (testado com Playwright) -> Fase 9
-- [x] API de alteração de status funciona (valida enum) -> Fase 4/5 (falta o frontend, Fase 10)
+- [x] API de alteração de status funciona (valida enum), select + botão na UI -> Fase 4/5/10
 - [x] Regra de feedback crítico validada no backend (curl + testes automatizados) -> Fase 3/4/5
 - [x] Testes automatizados (diferencial) -> Fase 5 — 31 testes (service + validation), Vitest
 - [x] README.md completo (verificado com instalação do zero, backend e frontend) -> Fase 11
-- [ ] AI_USAGE.md preenchido                       -> Fase 11
+- [x] AI_USAGE.md preenchido (estrutura da seção 9 do desafio, revalidado com o texto completo) -> Fase 11
 - [ ] Nenhuma credencial real publicada             -> Fase 11 (revisão final)
