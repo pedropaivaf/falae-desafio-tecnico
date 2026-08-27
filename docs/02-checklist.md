@@ -12,6 +12,6 @@
 - [x] API de alteração de status funciona (valida enum) -> Fase 4/5 (falta o frontend, Fase 10)
 - [x] Regra de feedback crítico validada no backend (curl + testes automatizados) -> Fase 3/4/5
 - [x] Testes automatizados (diferencial) -> Fase 5 — 31 testes (service + validation), Vitest
-- [ ] README.md completo                          -> Fase 11
+- [x] README.md completo (verificado com instalação do zero, backend e frontend) -> Fase 11
 - [ ] AI_USAGE.md preenchido                       -> Fase 11
 - [ ] Nenhuma credencial real publicada             -> Fase 11 (revisão final)

@@ -99,6 +99,11 @@ Formato por entrada: data | fase | o que pedi | o que a IA sugeriu | o que valid
 - Status foi deixado só como badge (leitura), sem botão de alterar ainda — isso é a Fase 10, separada.
 - Como validei: `npx tsc --noEmit` e `npm run build` sem erros; depois um teste E2E real com Playwright: abri o modal de um feedback com uma nota existente, adicionei uma nova via formulário e confirmei visualmente que ela apareceu no topo da lista (mais nova primeiro, igual ao backend) sem recarregar a página, com o campo de texto limpo depois do envio.
 
+### 2026-08-27 | Fase 11 (parcial) — README.md
+- Pedi: escrever o README.md final documentando todas as fases já concluídas.
+- IA gerou: README com apresentação, tecnologias, estrutura do repo, passo a passo de instalação (backend e frontend), configuração de banco, variáveis de ambiente, tabela de comandos, decisões técnicas (resumo do `docs/01-planejamento.md`), funcionalidades concluídas e pendências reais (alteração de status na UI ainda falta — Fase 10 — e o `AI_USAGE.md` final).
+- Como validei (e não só lendo o texto): simulei uma instalação do zero de verdade, num diretório limpo — `rm -rf node_modules/dist/generated/dev.db/.env`, depois segui exatamente o passo a passo do README (`npm install`, copiar `.env.example`, `prisma generate`, `npm run prisma:migrate`, `npm run prisma:seed`, `npm run dev`) pro backend, e o mesmo pro frontend. Confirmei que o backend sobe, `/health` responde, os 12 feedbacks do seed aparecem, o frontend sobe e o proxy `/api` funciona — e que `npm test` roda os 31 testes também numa instalação limpa. Só documentei como "verificado" depois de ver funcionar do zero, não presumi que os comandos estavam certos só porque fazem sentido.
+
 <!-- Continue adicionando uma entrada por decisão/dúvida relevante nas próximas fases.
      Preste atenção especial a qualquer sugestão que precisar corrigir - isso vira
      a seção "Sugestão incorreta ou incompleta" do AI_USAGE.md. -->
