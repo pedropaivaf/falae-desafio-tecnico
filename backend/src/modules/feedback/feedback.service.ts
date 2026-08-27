@@ -18,9 +18,16 @@ export async function listFeedbacks(filters: FeedbackFilters) {
     orderBy: { createdAt: "desc" },
   });
 
+  // A busca por texto é filtrada aqui (não no SQL): o SQLite só ignora
+  // maiúscula/minúscula em caracteres ASCII por padrão, e o app é em
+  // português (nomes/comentários com "é", "ç", "ã" etc. ficariam de fora).
+  const data = filters.search
+    ? feedbacks.filter((feedback) => matchesSearch(feedback, filters.search as string))
+    : feedbacks;
+
   return {
-    data: feedbacks,
-    indicators: buildIndicators(feedbacks),
+    data,
+    indicators: buildIndicators(data),
   };
 }
 
@@ -39,14 +46,27 @@ function buildWhere(filters: FeedbackFilters) {
     where.rating = filters.rating;
   }
 
-  if (filters.search) {
-    where.OR = [
-      { customerName: { contains: filters.search } },
-      { comment: { contains: filters.search } },
-    ];
-  }
-
   return where;
+}
+
+// \p{Diacritic} (com a flag "u") remove os acentos depois do normalize("NFD")
+// separar cada caractere da sua marca de acento.
+const DIACRITICS_REGEX = /\p{Diacritic}/gu;
+
+function normalizeText(value: string): string {
+  return value.normalize("NFD").replace(DIACRITICS_REGEX, "").toLowerCase();
+}
+
+function matchesSearch(
+  feedback: { customerName: string; comment: string | null },
+  search: string
+): boolean {
+  const term = normalizeText(search);
+
+  return (
+    normalizeText(feedback.customerName).includes(term) ||
+    (feedback.comment !== null && normalizeText(feedback.comment).includes(term))
+  );
 }
 
 function buildIndicators(feedbacks: { rating: number }[]) {

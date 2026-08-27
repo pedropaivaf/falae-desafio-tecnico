@@ -4,8 +4,8 @@ dist
 # Keep environment variables out of version control
 .env
 
-# SQLite database file (gerado por migrate/seed, não versionado)
-dev.db
+# Bancos SQLite (dev.db e o test.db dos testes) — gerados, não versionados
+*.db
 *.db-journal
 
 # Prisma Client gerado (regenerado via `npx prisma generate`)
