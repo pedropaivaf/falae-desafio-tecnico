@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+/* Paleta extraída da logo da Falaê! (teal + laranja + cinza). */
+@theme {
+  --color-brand-teal: #0288a1;
+  --color-brand-teal-hover: #027489;
+  --color-brand-teal-dark: #015f71;
+  --color-brand-teal-tint: #f0f8f9;
+
+  --color-brand-orange: #fe8f00;
+  --color-brand-orange-hover: #d87a00;
+  --color-brand-orange-tint: #fff8f0;
+
+  --color-brand-gray: #a9a9a9;
+}
